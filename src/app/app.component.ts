@@ -26,7 +26,7 @@ import { GridDataResult, PageChangeEvent } from '@progress/kendo-angular-grid';
           [pageSize]="pageSize"
           scrollable="virtual"
           [rowHeight]="36"
-          [height]="450"
+          [height]="940"
           (pageChange)="pageChange($event)"
           [navigable]="true"
         >
