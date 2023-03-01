@@ -1,5 +1,15 @@
 import { Component, ViewEncapsulation } from '@angular/core';
-import { GridDataResult, PageChangeEvent } from '@progress/kendo-angular-grid';
+import { GridDataResult, DataStateChangeEvent, PageChangeEvent, ExcelModule  } from '@progress/kendo-angular-grid';
+import { filterBy, process, State  } from "@progress/kendo-data-query";
+import { CompositeFilterDescriptor } from "@progress/kendo-data-query";
+
+const distinct = data =>
+  data
+    .map(x => x.title)
+    .filter(
+      (x, idx, xs) =>
+        xs.findIndex(y => y.title === x.title) === idx
+    );
 
 @Component({
     selector: 'my-app',
@@ -20,39 +30,84 @@ import { GridDataResult, PageChangeEvent } from '@progress/kendo-angular-grid';
         }
     `],
     template: `
+      Total Records: {{gridView.total}}  
       <kendo-grid
           [data]="gridView"
-          [skip]="skip"
+          [skip]="state.skip"
           [pageSize]="pageSize"
           scrollable="virtual"
           [rowHeight]="36"
           [height]="940"
           (pageChange)="pageChange($event)"
           [navigable]="true"
+          [filterable]="true"
+          [filter]="state.filter"
+          [sortable]="true"
+          [sort]="state.sort"
+          [reorderable]="true"
+          [resizable]="true"
+          (dataStateChange)="dataStateChange($event)"
         >
-        <kendo-grid-column field="id" [width]="80" title="ID"></kendo-grid-column>
+        <ng-template kendoGridToolbarTemplate>
+        <button type="button" kendoGridExcelCommand icon="file-excel">
+          Export to Excel
+        </button>
+      </ng-template>
+        <kendo-grid-column field="id" [width]="180" title="ID"></kendo-grid-column>
         <kendo-grid-column field="firstName" title="First Name" [width]="130"></kendo-grid-column>
         <kendo-grid-column field="lastName" title="Last Name" [width]="130"></kendo-grid-column>
         <kendo-grid-column field="city" title="City" [width]="130"></kendo-grid-column>
-        <kendo-grid-column field="title" title="Title" [width]="180"></kendo-grid-column>
+        <kendo-grid-column field="title" title="Title" [width]="180">
+        <ng-template kendoGridFilterCellTemplate let-filter>
+            <my-dropdown-filter
+            [filter]="filter"
+            [data]="distinctTitles"
+            textField="title"
+            valueField="title"
+            >
+            </my-dropdown-filter>
+      </ng-template>
+        
+        </kendo-grid-column>
+        <kendo-grid-excel fileName="Products.xlsx"></kendo-grid-excel>
       </kendo-grid>
   `
 })
 export class AppComponent {
-    public gridView: GridDataResult;
     public data: unknown[];
     public pageSize = 100;
     public skip = 0;
-
+    public state: State = {
+        skip: 0,
+        take: 5,
+        sort: [],
+        group: [],
+        filter: {
+            logic: "and",
+            filters: [],
+        },
+    };
+    public filter: CompositeFilterDescriptor = { filters: [], logic: "and" };
+    public distinctTitles: any[];
+    public gridView: GridDataResult; //= process(this.createRandomData(100000), this.state);
+    
     constructor() {
         this.data = this.createRandomData(100000);
+        //console.log(this.data)
+        this.distinctTitles = distinct(this.data)
+        console.log('titles', this.distinctTitles)
         this.loadProducts();
     }
+
+    public dataStateChange(state: DataStateChangeEvent): void {
+        this.state = state;
+        this.gridView = process(this.data, this.state);
+      }
 
     public pageChange(event: PageChangeEvent): void {
         this.skip = event.skip;
         console.log('new page')
-        this.loadProducts();
+        //this.loadProducts();
     }
 
     private loadProducts(): void {
